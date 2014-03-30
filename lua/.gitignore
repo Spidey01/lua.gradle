@@ -1,0 +1,12 @@
+build/*
+.gradle/*
+#
+# These next ones are just because I use a container project to download/unpack
+# the source. If this was to be made a patch to Lua or something more direct
+# than that, just delete these lines and keep the above.
+# 
+README
+src/*
+doc/*
+# vim swap files
+*.sw?

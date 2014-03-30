@@ -1,0 +1,54 @@
+
+group 'lua'
+version '5.2.3'
+description "Gradle container for ${group}-${version}"
+ext {
+    archiveName = "${group}-${version}.tar.gz"
+    archiveDir  = "${buildDir}/wget"
+    archivePath = "${archiveDir}/${archiveName}"
+    downloadUrl = "http://www.lua.org/ftp/${archiveName}"
+    extractFrom = "${project.ext.archivePath}/${group}-${version}"
+    extractTo   = "${buildDir}/upstream"
+    upstreamDir = "${extractTo}/${group}-${version}"
+    luaDir      = "${projectDir}/${project.group}"
+    publicHeaders = [ 'lauxlib.h', 'lua.h', 'lua.hpp', 'luaconf.h', 'lualib.h' ]
+}
+
+
+task download(type: Exec, description: 'download upstream source.') {
+    executable "wget"
+    args /*"-nc",*/"-O", project.archivePath, project.downloadUrl
+    doFirst {
+        def d = new File(project.ext.archiveDir)
+        if (!d.isDirectory()) {
+            d.mkdirs()
+        }
+    }
+}
+
+
+task extract(type: Sync, description: 'extract upstream source.') {
+    from tarTree(resources.gzip(project.ext.archivePath))
+    into project.ext.extractTo
+    if (!(new File(project.ext.archivePath)).exists()) {
+        dependsOn download
+    }
+}
+
+
+task populate(type: Copy, description: '') {
+    from "${project.ext.upstreamDir}"
+    into project.ext.luaDir
+    // Don't need these ;).
+    exclude "Makefile"
+    dependsOn extract
+}
+
+
+task pristine(type: Delete, description: 'Clean lua directory until pristine.') {
+    delete "${project.ext.luaDir}/README",
+           "${project.ext.luaDir}/doc",
+           "${project.ext.luaDir}/build",
+           "${project.ext.luaDir}/src"
+}
+

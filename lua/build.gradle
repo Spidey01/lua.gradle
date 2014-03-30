@@ -1,0 +1,167 @@
+
+apply plugin: 'c'
+
+version '5.2.3'
+description 'build.gradle project for Lua'
+
+
+ext {
+    defines = ['LUA_COMPAT_ALL']
+    gccArgs = ['-O2', '-Wall']
+
+    linuxGccDefines = []
+    linuxGccArgs = ['-lm', '-ldl', '-lreadline']
+    linuxGccLinkerArgs = ['-E']
+}
+
+
+model {
+
+    platforms {
+        linux {
+            operatingSystem 'linux'
+        }
+        windows {
+            operatingSystem 'windows'
+        }
+        macosx {
+            operatingSystem 'osx'
+        }
+        solaris {
+            operatingSystem 'solaris'
+        }
+        // This part of gradle doesn't support Lua's PLATS via operatingSystem values.
+        //
+        //  aix ansi bsd freebsd generic mingw posix
+        //  (maybe does mingw)
+        //
+        // At least not like this.
+    }
+
+
+    binaries.all {
+        def flags = project.ext
+
+        cppCompiler.define flags.defines
+
+        if (toolChain in Gcc) {
+            cppCompiler.args flags.gccArgs
+
+            def os = targetPlatform.name 
+            if (os == 'linux') {
+                cppCompiler.define linuxGccDefines
+                cppCompiler.args flags.linuxGccArgs
+                linker.args flags.linuxGccLinkerArgs
+            }
+        }
+    }
+}
+
+
+sources {
+    /*
+     * Sources for the Lua base library.
+     */
+    base {
+        c {
+            source {
+                srcDir "src"
+                /*
+                include 'lapi.c', 'lcode.c', 'lctype.c', 'ldebug.c', 'ldo.c',
+                        'ldump.c', 'lfunc.c', 'lgc.c', 'llex.c', 'lmem.c',
+                        'lobject.c', 'lopcodes.c', 'lparser.c', 'lstate.c',
+                        'lstring.c', 'ltable.c', 'ltm.c', 'lundump.c', 'lvm.c',
+                        'lzio.c', 'lauxlib.c', 'lbaselib.c', 'lbitlib.c',
+                        'lcorolib.c', 'ldblib.c', 'liolib.c', 'lmathlib.c',
+                        'loslib.c', 'lstrlib.c', 'ltablib.c', 'loadlib.c',
+                        'linit.c'
+                */
+                include '*.c'
+                exclude 'lua.c', 'luac.c'
+            }
+        }
+    }
+
+    /*
+     * Sources specific to Lua interpreter.
+     */
+    lua {
+        c {
+            source {
+                srcDir "src"
+                include 'lua.c'
+            }
+        }
+    }
+
+    /*
+     * Sources specific to Lua compiler.
+     */
+    luac {
+        c {
+            source {
+                srcDir "src"
+                include 'luac.c'
+            }
+        }
+    }
+}
+
+
+libraries {
+    lua {
+        source sources.base
+    }
+}
+
+
+executables {
+    lua {
+        source sources.lua
+        /*
+         * documentation seems to say do it this way
+         *  -> http://www.gradle.org/docs/current/userguide/nativeBinaries.html#N15A54
+         * But result is:
+         *
+$ ./gradlew populate :lua:build
+
+FAILURE: Build failed with an exception.
+
+Where:
+Build file '{snip}/lua.gradle/lua/build.gradle' line: 126
+
+* What went wrong:
+A problem occurred evaluating project ':lua'.
+> Could not find method lib() for arguments [org.gradle.nativebinaries.internal.ProjectNativeLibraryRequirement@1a2f9dd] on executable 'lua'.
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.
+
+BUILD FAILED
+
+Total time: 3.648 secs
+
+         * and adding --info or --debug doesn't explain anything useful but a backtrace!
+         */
+        lib libraries.lua.static
+    }
+
+    luac {
+        source sources.luac
+        lib libraries.lua.static
+    }
+}
+
+
+task build(description: 'Assembles and tests this project.') {
+    dependsOn binaries.withType(StaticLibraryBinary).matching {
+        it.buildable
+    }
+    dependsOn binaries.withType(SharedLibraryBinary).matching {
+        it.buildable
+    }
+    dependsOn binaries.withType(ExecutableBinary).matching {
+        it.buildable
+    }
+}
+
