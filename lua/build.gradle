@@ -42,15 +42,15 @@ model {
     binaries.all {
         def flags = project.ext
 
-        cppCompiler.define flags.defines
+        cCompiler.define flags.defines
 
         if (toolChain in Gcc) {
-            cppCompiler.args flags.gccArgs
+            cCompiler.args flags.gccArgs
 
             def os = targetPlatform.name 
             if (os == 'linux') {
-                cppCompiler.define linuxGccDefines
-                cppCompiler.args flags.linuxGccArgs
+                cCompiler.define linuxGccDefines
+                cCompiler.args flags.linuxGccArgs
                 linker.args flags.linuxGccLinkerArgs
             }
         }
@@ -66,16 +66,6 @@ sources {
         c {
             source {
                 srcDir "src"
-                /*
-                include 'lapi.c', 'lcode.c', 'lctype.c', 'ldebug.c', 'ldo.c',
-                        'ldump.c', 'lfunc.c', 'lgc.c', 'llex.c', 'lmem.c',
-                        'lobject.c', 'lopcodes.c', 'lparser.c', 'lstate.c',
-                        'lstring.c', 'ltable.c', 'ltm.c', 'lundump.c', 'lvm.c',
-                        'lzio.c', 'lauxlib.c', 'lbaselib.c', 'lbitlib.c',
-                        'lcorolib.c', 'ldblib.c', 'liolib.c', 'lmathlib.c',
-                        'loslib.c', 'lstrlib.c', 'ltablib.c', 'loadlib.c',
-                        'linit.c'
-                */
                 include '*.c'
                 exclude 'lua.c', 'luac.c'
             }
@@ -118,37 +108,16 @@ libraries {
 executables {
     lua {
         source sources.lua
-        /*
-         * documentation seems to say do it this way
-         *  -> http://www.gradle.org/docs/current/userguide/nativeBinaries.html#N15A54
-         * But result is:
-         *
-$ ./gradlew populate :lua:build
-
-FAILURE: Build failed with an exception.
-
-Where:
-Build file '{snip}/lua.gradle/lua/build.gradle' line: 126
-
-* What went wrong:
-A problem occurred evaluating project ':lua'.
-> Could not find method lib() for arguments [org.gradle.nativebinaries.internal.ProjectNativeLibraryRequirement@1a2f9dd] on executable 'lua'.
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.
-
-BUILD FAILED
-
-Total time: 3.648 secs
-
-         * and adding --info or --debug doesn't explain anything useful but a backtrace!
-         */
-        lib libraries.lua.static
+        binaries.all {
+            lib libraries.lua.static
+        }
     }
 
     luac {
         source sources.luac
-        lib libraries.lua.static
+        binaries.all {
+            lib libraries.lua.static
+        }
     }
 }
 
